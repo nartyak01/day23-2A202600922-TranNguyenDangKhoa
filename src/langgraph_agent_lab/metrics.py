@@ -39,12 +39,14 @@ def metric_from_state(state: dict[str, Any], expected_route: str, approval_requi
     errors = state.get("errors", []) or []
     actual_route = state.get("route")
     approval = state.get("approval")
+    approval_observed = isinstance(approval, dict) and "approved" in approval
     nodes = [event.get("node", "unknown") for event in events]
     retry_count = sum(1 for node in nodes if node == "retry")
     interrupt_count = sum(1 for node in nodes if node == "approval")
-    success = actual_route == expected_route and bool(state.get("final_answer") or state.get("pending_question"))
+    has_response = bool(state.get("final_answer") or state.get("pending_question"))
+    success = actual_route == expected_route and has_response
     if approval_required:
-        success = success and approval is not None
+        success = success and approval_observed
     return ScenarioMetric(
         scenario_id=str(state.get("scenario_id", "unknown")),
         success=success,
@@ -54,7 +56,7 @@ def metric_from_state(state: dict[str, Any], expected_route: str, approval_requi
         retry_count=retry_count,
         interrupt_count=interrupt_count,
         approval_required=approval_required,
-        approval_observed=approval is not None,
+        approval_observed=approval_observed,
         errors=list(errors),
     )
 
